@@ -1,0 +1,82 @@
+(* SPDX-License-Identifier: GPL-3.0 *)
+scilla_version 0
+
+(***************************************************)
+(*               Associated library                *)
+(***************************************************)
+import BoolUtils IntUtils
+
+library HelloWorld
+
+let zero_address = 0x0000000000000000000000000000000000000000
+let zero_uint128 = Uint128 0
+let one_uint128 = Uint128 1
+let false = False
+let true = True
+let not_owner_code  = Uint32 1
+let set_hello_code  = Uint32 2
+
+(* Error exceptions *)
+type Error =
+  | NotOperatorError
+  | ZeroAddressError
+
+let make_error =
+  fun (result : Error) =>
+    let result_code = 
+      match result with
+      | NotOperatorError                    => Int32 -3
+      | ZeroAddressError                    => Int32 -4
+      end
+    in
+    { _exception : "Error"; code : result_code }
+
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+
+contract HelloWorld()
+
+field operators: Map ByStr20 Bool = Emp ByStr20 Bool
+field welcome_msg : String = ""
+
+(* Procedures *)
+procedure Throw(error : Error)
+  e = make_error error;
+  throw e
+end
+
+procedure RequireNonZeroAddress(to: ByStr20)
+  (* Reference: https://github.com/ConsenSys/smart-contract-best-practices/blob/master/docs/tokens.md *)
+  is_zero_address = builtin eq to zero_address;
+  match is_zero_address with
+  | False =>
+  | True =>
+    error = ZeroAddressError;
+    Throw error
+  end
+end
+
+procedure RequireOperator(operator: ByStr20)
+  RequireNonZeroAddress operator;
+  isOperator <- exists operators[operator];
+  match isOperator with
+  | True => 
+  | False =>
+    error = NotOperatorError;
+    Throw error
+  end
+end
+
+transition setHello (msg : String)
+  RequireOperator _this_address;
+  welcome_msg := msg;
+  e = { _eventname : "setHello"; code : set_hello_code; caller: _this_address };
+  event e
+end
+
+transition getHello ()
+  r <- welcome_msg;
+  e = {_eventname: "getHello"; msg: r};
+  event e
+end
