@@ -6,28 +6,31 @@ scilla_version 0
 (***************************************************)
 import BoolUtils IntUtils
 
-library HelloWorldState
+library HelloWorldProxy
 
 let zero_address = 0x0000000000000000000000000000000000000000
 let zero_uint128 = Uint128 0
 let one_uint128 = Uint128 1
 let false = False
 let true = True
-let not_owner_code  = Uint32 1
-let set_hello_code  = Uint32 2
+
+let one_msg = 
+  fun (msg : Message) => 
+    let nil_msg = Nil {Message} in
+    Cons {Message} msg nil_msg
 
 (* Error exceptions *)
 type Error =
-  | NotMultiSigError
-  | NotOperatorError
+  | NotPausedError
+  | PausedError
   | ZeroAddressError
 
 let make_error =
   fun (result : Error) =>
     let result_code = 
       match result with
-      | NotMultiSigError                    => Int32 -1
-      | NotOperatorError                    => Int32 -2
+      | NotPausedError                      => Int32 -1
+      | PausedError                         => Int32 -2
       | ZeroAddressError                    => Int32 -3
       end
     in
@@ -37,10 +40,9 @@ let make_error =
 (*             The contract definition             *)
 (***************************************************)
 
-contract HelloWorldState(multiSig: ByStr20)
+contract HelloWorldProxy(state: ByStr20)
 
-field operators: Map ByStr20 Bool = Emp ByStr20 Bool
-field welcome_msg : String = ""
+field is_paused: Bool = false
 
 (* Procedures *)
 procedure Throw(error : Error)
@@ -59,40 +61,46 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireOperator(operator: ByStr20)
-  RequireNonZeroAddress operator;
-  isOperator <- exists operators[operator];
-  match isOperator with
-  | True => 
+procedure RequireNotPaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
   | False =>
-    error = NotOperatorError;
+  | True =>
+    (* Contract is paused *)
+    error = PausedError;
     Throw error
   end
 end
 
-transition updateOperator(to: ByStr20, status: Bool)
-  is_valid = builtin eq multiSig _sender;
-  match is_valid with
-  | False =>
-    error = NotMultiSigError;
-    Throw error
+procedure RequirePaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
   | True =>
-    cur_bnum <- & BLOCKNUMBER;  
-    operators[to] := status;
-    e = {_eventname : "OperatorUpdated"; when : cur_bnum};
-    event e
+  | False =>
+    (* Contract is paused *)
+    error = NotPausedError;
+    Throw error
   end
+end
+
+procedure SetHello(state_address: ByStr20, msg_to_send : String)
+  msg = {
+    _tag: "SetHello";
+    _recipient: state_address;
+    _amount: Uint128 0;
+    msg: msg_to_send
+  };
+  msgs = one_msg msg;
+  send msgs
 end
 
 transition setHello (msg : String)
-  RequireOperator _this_address;
-  welcome_msg := msg;
-  e = { _eventname : "setHello"; code : set_hello_code; caller: _this_address };
-  event e
+  RequireNotPaused;
+  SetHello state msg
 end
 
-transition getHello ()
-  r <- welcome_msg;
-  e = {_eventname: "getHello"; msg: r};
-  event e
-end
+
