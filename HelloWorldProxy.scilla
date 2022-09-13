@@ -87,11 +87,12 @@ procedure RequirePaused()
   end
 end
 
-procedure SetHello(state_address: ByStr20, msg_to_send : String)
+procedure SetHello(msg_to_send : String)
   msg = {
     _tag: "SetHello";
-    _recipient: state_address;
+    _recipient: state;
     _amount: Uint128 0;
+    operator: state;
     msg: msg_to_send
   };
   msgs = one_msg msg;
@@ -100,7 +101,7 @@ end
 
 transition setHello (msg : String)
   RequireNotPaused;
-  SetHello state msg
+  SetHello msg
 end
 
 
