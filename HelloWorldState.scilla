@@ -9,12 +9,8 @@ import BoolUtils IntUtils
 library HelloWorldState
 
 let zero_address = 0x0000000000000000000000000000000000000000
-let zero_uint128 = Uint128 0
-let one_uint128 = Uint128 1
 let false = False
 let true = True
-let not_owner_code  = Uint32 1
-let set_hello_code  = Uint32 2
 
 (* Error exceptions *)
 type Error =

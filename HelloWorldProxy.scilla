@@ -9,8 +9,6 @@ import BoolUtils IntUtils
 library HelloWorldProxy
 
 let zero_address = 0x0000000000000000000000000000000000000000
-let zero_uint128 = Uint128 0
-let one_uint128 = Uint128 1
 let false = False
 let true = True
 
@@ -102,5 +100,3 @@ transition setHello (msg : String)
   RequireNotPaused;
   SetHello msg
 end
-
-
