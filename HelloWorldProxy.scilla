@@ -92,7 +92,6 @@ procedure SetHello(msg_to_send : String)
     _tag: "SetHello";
     _recipient: state;
     _amount: Uint128 0;
-    operator: state;
     msg: msg_to_send
   };
   msgs = one_msg msg;

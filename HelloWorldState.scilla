@@ -59,10 +59,9 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireOperator(operator: ByStr20)
-  is_operator_exist <- exists operators[operator];
-  is_operator = andb is_operator_exist true;
-  match is_operator with
+procedure RequireOperator()
+  is_operator_exist <- exists operators[_sender];
+  match is_operator_exist with
   | True =>
   | False =>
     error = NotOperatorError;
@@ -84,10 +83,10 @@ transition updateOperator(to: ByStr20, status: Bool)
   end
 end
 
-transition SetHello (operator: ByStr20, msg : String)
-  RequireOperator operator;
+transition SetHello (msg : String)
+  RequireOperator;
   welcome_msg := msg;
-  e = { _eventname : "SetHello"; caller: operator };
+  e = { _eventname : "SetHello"; caller: _sender };
   event e
 end
 
