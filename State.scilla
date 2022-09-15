@@ -37,6 +37,8 @@ contract State(multiSig: ByStr20)
 
 field proxy: ByStr20 = zero_address
 
+field transfer : Map ByStr20 (Map ByStr20 (Map ByStr20 Uint256)) = Emp ByStr20 (Map ByStr20 (Map ByStr20 Uint256))
+
 field welcome_msg : String = ""
 
 (* Procedures *)
@@ -68,6 +70,10 @@ procedure RequireProxy()
   end
 end
 
+procedure UpdateZRC2Transfer_(token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+  transfer[token][from][to] := amount
+end
+
 (* @multi-sig *)
 transition updateProxy(to: ByStr20)
   RequireNonZeroAddress to;
@@ -88,15 +94,7 @@ transition updateProxy(to: ByStr20)
   end
 end
 
-transition SetHello (msg : String)
+transition SampleZRC2Transfer(token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
   RequireProxy;
-  welcome_msg := msg;
-  e = { _eventname : "SetHello"; caller: _sender };
-  event e
-end
-
-transition GetHello ()
-  r <- welcome_msg;
-  e = {_eventname: "GetHello"; msg: r};
-  event e
+  UpdateZRC2Transfer_ token from to amount
 end

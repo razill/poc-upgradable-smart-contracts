@@ -40,7 +40,7 @@ let make_error =
 (*             The contract definition             *)
 (***************************************************)
 
-contract Proxy(state: ByStr20, proxy_admin: ByStr20)
+contract Proxy(state: ByStr20, proxy_admin: ByStr20, transfer_proxy: ByStr20)
 
 field is_paused: Bool = false
 
@@ -98,21 +98,46 @@ procedure RequirePaused()
   end
 end
 
-procedure SetHello_(msg_to_send : String)
-  msg = {
-    _tag: "SetHello";
-    _recipient: state;
+(* Call Transfer Proxy to Transfer Tokens *)
+procedure SampleZRC2Transfer_transfer (token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+  msg_to_zrc2 = {
+    _tag: "ZRC2TransferFrom";
+    _recipient: transfer_proxy;
     _amount: Uint128 0;
-    msg: msg_to_send
+    token: token;
+    from: from;
+    to: to;
+    amount: amount
   };
-  msgs = one_msg msg;
+  msgs = one_msg msg_to_zrc2;
   send msgs
 end
 
-transition SetHello (msg : String)
+(* Call State Contract to Update Transfer details *)
+procedure SampleZRC2Transfer_update (token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+  msg_to_update = {
+    _tag: "SampleZRC2Transfer";
+    _recipient: state;
+    _amount: Uint128 0;
+    token: token;
+    from: from;
+    to: to;
+    amount: amount
+  };
+  msgs = one_msg msg_to_update;
+  send msgs
+end
+
+(* Verify and Initiate Transfer & Update *)
+transition SampleZRC2Transfer(token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
   RequireProxyAdmin;
   RequireNotPaused;
   RequireNonZeroAddress proxy_admin;
   RequireNonZeroAddress state;
-  SetHello_ msg
+  RequireNonZeroAddress transfer_proxy;
+  RequireNonZeroAddress token;
+  RequireNonZeroAddress from;
+  RequireNonZeroAddress to;
+  SampleZRC2Transfer_transfer token from to amount;
+  SampleZRC2Transfer_update token from to amount
 end
