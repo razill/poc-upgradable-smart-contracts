@@ -6,41 +6,38 @@ scilla_version 0
 (***************************************************)
 import BoolUtils IntUtils
 
-library HelloWorldProxy
+library State
 
 let zero_address = 0x0000000000000000000000000000000000000000
 let false = False
 let true = True
 
-let one_msg = 
-  fun (msg : Message) => 
-    let nil_msg = Nil {Message} in
-    Cons {Message} msg nil_msg
-
 (* Error exceptions *)
 type Error =
-  | NotPausedError
-  | PausedError
+  | NotMultiSigError
+  | NotOperatorError
   | ZeroAddressError
 
 let make_error =
   fun (result : Error) =>
     let result_code = 
       match result with
-      | NotPausedError                      => Int32 -1
-      | PausedError                         => Int32 -2
+      | NotMultiSigError                    => Int32 -1
+      | NotOperatorError                    => Int32 -2
       | ZeroAddressError                    => Int32 -3
       end
     in
-    { _exception : "Error"; code : result_code }
+    { _exception : "Error"; source : "State"; code : result_code }
 
 (***************************************************)
 (*             The contract definition             *)
 (***************************************************)
 
-contract HelloWorldProxy(state: ByStr20)
+contract State(multiSig: ByStr20)
 
-field is_paused: Bool = false
+field proxy: ByStr20 = zero_address
+
+field welcome_msg : String = ""
 
 (* Procedures *)
 procedure Throw(error : Error)
@@ -59,44 +56,47 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireNotPaused()
-  (* Reference: *)
-  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
-  paused <- is_paused;
-  match paused with
-  | False =>
+procedure RequireProxy()
+  current_proxy <- proxy;
+  RequireNonZeroAddress current_proxy;
+  is_proxy = builtin eq current_proxy _sender;
+  match is_proxy with
   | True =>
-    (* Contract is paused *)
-    error = PausedError;
+  | False =>
+    error = NotOperatorError;
     Throw error
   end
 end
 
-procedure RequirePaused()
-  (* Reference: *)
-  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
-  paused <- is_paused;
-  match paused with
-  | True =>
+(* @multi-sig *)
+transition updateProxy(to: ByStr20)
+  RequireNonZeroAddress to;
+  is_valid = builtin eq multiSig _sender;
+  match is_valid with
   | False =>
-    (* Contract is paused *)
-    error = NotPausedError;
+    error = NotMultiSigError;
     Throw error
+  | True =>
+    cur_bnum <- & BLOCKNUMBER;
+    proxy := to;
+    e = { 
+      _eventname: "ProxyUpdated";
+      address: to;
+      when: cur_bnum
+    };
+    event e
   end
 end
 
-procedure SetHello(msg_to_send : String)
-  msg = {
-    _tag: "SetHello";
-    _recipient: state;
-    _amount: Uint128 0;
-    msg: msg_to_send
-  };
-  msgs = one_msg msg;
-  send msgs
+transition SetHello (msg : String)
+  RequireProxy;
+  welcome_msg := msg;
+  e = { _eventname : "SetHello"; caller: _sender };
+  event e
 end
 
-transition setHello (msg : String)
-  RequireNotPaused;
-  SetHello msg
+transition GetHello ()
+  r <- welcome_msg;
+  e = {_eventname: "GetHello"; msg: r};
+  event e
 end

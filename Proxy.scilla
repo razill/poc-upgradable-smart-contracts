@@ -1,0 +1,118 @@
+(* SPDX-License-Identifier: GPL-3.0 *)
+scilla_version 0
+
+(***************************************************)
+(*               Associated library                *)
+(***************************************************)
+import BoolUtils IntUtils
+
+library Proxy
+
+let zero_address = 0x0000000000000000000000000000000000000000
+let false = False
+let true = True
+
+let one_msg = 
+  fun (msg : Message) => 
+    let nil_msg = Nil {Message} in
+    Cons {Message} msg nil_msg
+
+(* Error exceptions *)
+type Error =
+  | NotPausedError
+  | PausedError
+  | ZeroAddressError
+  | NotProxyAdminError
+
+let make_error =
+  fun (result : Error) =>
+    let result_code = 
+      match result with
+      | NotPausedError                      => Int32 -1
+      | PausedError                         => Int32 -2
+      | ZeroAddressError                    => Int32 -3
+      | NotProxyAdminError                  => Int32 -4
+      end
+    in
+    { _exception : "Error"; source : "Proxy"; code : result_code }
+
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+
+contract Proxy(state: ByStr20, proxy_admin: ByStr20)
+
+field is_paused: Bool = false
+
+(* Procedures *)
+procedure Throw(error : Error)
+  e = make_error error;
+  throw e
+end
+
+procedure RequireProxyAdmin()
+  current_proxy = proxy_admin;
+  is_proxy_admin = builtin eq current_proxy _sender;
+  match is_proxy_admin with
+  | True => 
+  | False =>
+    error = NotProxyAdminError;
+    Throw error
+  end
+end
+
+procedure RequireNonZeroAddress(to: ByStr20)
+  (* Reference: https://github.com/ConsenSys/smart-contract-best-practices/blob/master/docs/tokens.md *)
+  is_zero_address = builtin eq to zero_address;
+  match is_zero_address with
+  | False =>
+  | True =>
+    error = ZeroAddressError;
+    Throw error
+  end
+end
+
+procedure RequireNotPaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
+  | False =>
+  | True =>
+    (* Contract is paused *)
+    error = PausedError;
+    Throw error
+  end
+end
+
+procedure RequirePaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
+  | True =>
+  | False =>
+    (* Contract is paused *)
+    error = NotPausedError;
+    Throw error
+  end
+end
+
+procedure SetHello_(msg_to_send : String)
+  msg = {
+    _tag: "SetHello";
+    _recipient: state;
+    _amount: Uint128 0;
+    msg: msg_to_send
+  };
+  msgs = one_msg msg;
+  send msgs
+end
+
+transition SetHello (msg : String)
+  RequireProxyAdmin;
+  RequireNotPaused;
+  RequireNonZeroAddress proxy_admin;
+  RequireNonZeroAddress state;
+  SetHello_ msg
+end

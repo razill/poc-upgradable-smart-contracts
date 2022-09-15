@@ -6,37 +6,45 @@ scilla_version 0
 (***************************************************)
 import BoolUtils IntUtils
 
-library HelloWorldState
+library Admin
 
 let zero_address = 0x0000000000000000000000000000000000000000
 let false = False
 let true = True
 
+let one_msg = 
+  fun (msg : Message) => 
+    let nil_msg = Nil {Message} in
+    Cons {Message} msg nil_msg
+
 (* Error exceptions *)
 type Error =
-  | NotMultiSigError
-  | NotOperatorError
+  | NotPausedError
+  | PausedError
   | ZeroAddressError
+  | NotMultiSigError
 
 let make_error =
   fun (result : Error) =>
     let result_code = 
       match result with
-      | NotMultiSigError                    => Int32 -1
-      | NotOperatorError                    => Int32 -2
+      | NotPausedError                      => Int32 -1
+      | PausedError                         => Int32 -2
       | ZeroAddressError                    => Int32 -3
+      | NotMultiSigError                    => Int32 -4
       end
     in
-    { _exception : "Error"; code : result_code }
+    { _exception : "Error"; source : "Admin"; code : result_code }
 
 (***************************************************)
 (*             The contract definition             *)
 (***************************************************)
 
-contract HelloWorldState(multiSig: ByStr20)
+contract Admin(multiSig: ByStr20)
 
-field operators: Map ByStr20 Bool = Emp ByStr20 Bool
-field welcome_msg : String = ""
+field proxy: ByStr20 = zero_address
+
+field is_paused: Bool = false
 
 (* Procedures *)
 procedure Throw(error : Error)
@@ -55,39 +63,39 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireOperator()
-  is_operator_exist <- exists operators[_sender];
-  match is_operator_exist with
-  | True =>
-  | False =>
-    error = NotOperatorError;
-    Throw error
-  end
+procedure SetHello_(msg_to_send : String)
+  current_proxy <- proxy;
+  RequireNonZeroAddress current_proxy;
+  msg = {
+    _tag: "SetHello";
+    _recipient: current_proxy;
+    _amount: Uint128 0;
+    msg: msg_to_send
+  };
+  msgs = one_msg msg;
+  send msgs
 end
 
-transition updateOperator(to: ByStr20, status: Bool)
+(* @multi-sig *)
+transition updateProxy(to: ByStr20)
+  RequireNonZeroAddress to;
   is_valid = builtin eq multiSig _sender;
   match is_valid with
   | False =>
     error = NotMultiSigError;
     Throw error
   | True =>
-    cur_bnum <- & BLOCKNUMBER;  
-    operators[to] := status;
-    e = {_eventname : "OperatorUpdated"; when : cur_bnum};
+    current_block_number <- & BLOCKNUMBER;
+    proxy := to;
+    e = { 
+      _eventname: "ProxyUpdated";
+      address: to;
+      when: current_block_number
+    };
     event e
   end
 end
 
 transition SetHello (msg : String)
-  RequireOperator;
-  welcome_msg := msg;
-  e = { _eventname : "SetHello"; caller: _sender };
-  event e
-end
-
-transition GetHello ()
-  r <- welcome_msg;
-  e = {_eventname: "GetHello"; msg: r};
-  event e
+  SetHello_ msg
 end
