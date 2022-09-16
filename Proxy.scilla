@@ -99,12 +99,12 @@ procedure RequirePaused()
 end
 
 (* Call Transfer Proxy to Transfer Tokens *)
-procedure SampleZRC2Transfer_transfer (token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+procedure SampleZRC2Transfer_transfer (token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   msg_to_zrc2 = {
     _tag: "ZRC2TransferFrom";
     _recipient: transfer_proxy;
     _amount: Uint128 0;
-    token: token;
+    token_address: token_address;
     from: from;
     to: to;
     amount: amount
@@ -114,12 +114,12 @@ procedure SampleZRC2Transfer_transfer (token: ByStr20, from: ByStr20, to: ByStr2
 end
 
 (* Call State Contract to Update Transfer details *)
-procedure SampleZRC2Transfer_update (token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+procedure SampleZRC2Transfer_update (token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   msg_to_update = {
     _tag: "SampleZRC2Transfer";
     _recipient: state;
     _amount: Uint128 0;
-    token: token;
+    token_address: token_address;
     from: from;
     to: to;
     amount: amount
@@ -129,15 +129,15 @@ procedure SampleZRC2Transfer_update (token: ByStr20, from: ByStr20, to: ByStr20,
 end
 
 (* Verify and Initiate Transfer & Update *)
-transition SampleZRC2Transfer(token: ByStr20, from: ByStr20, to: ByStr20, amount: Uint256)
+transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   RequireProxyAdmin;
   RequireNotPaused;
   RequireNonZeroAddress proxy_admin;
   RequireNonZeroAddress state;
   RequireNonZeroAddress transfer_proxy;
-  RequireNonZeroAddress token;
+  RequireNonZeroAddress token_address;
   RequireNonZeroAddress from;
   RequireNonZeroAddress to;
-  SampleZRC2Transfer_transfer token from to amount;
-  SampleZRC2Transfer_update token from to amount
+  SampleZRC2Transfer_transfer token_address from to amount;
+  SampleZRC2Transfer_update token_address from to amount
 end
