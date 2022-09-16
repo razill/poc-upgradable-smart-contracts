@@ -39,8 +39,6 @@ field proxy: ByStr20 = zero_address
 
 field transfer : Map ByStr20 (Map ByStr20 (Map ByStr20 Uint128)) = Emp ByStr20 (Map ByStr20 (Map ByStr20 Uint128))
 
-field welcome_msg : String = ""
-
 (* Procedures *)
 procedure Throw(error : Error)
   e = make_error error;
@@ -58,7 +56,7 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireProxy()
+procedure RequireLogic()
   current_proxy <- proxy;
   RequireNonZeroAddress current_proxy;
   is_proxy = builtin eq current_proxy _sender;
@@ -75,7 +73,7 @@ procedure UpdateZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20
 end
 
 (* @multi-sig *)
-transition updateProxy(to: ByStr20)
+transition UpdateLogic(to: ByStr20)
   RequireNonZeroAddress to;
   is_valid = builtin eq multiSig _sender;
   match is_valid with
@@ -95,6 +93,6 @@ transition updateProxy(to: ByStr20)
 end
 
 transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
-  RequireProxy;
+  RequireLogic;
   UpdateZRC2Transfer_ token_address from to amount
 end
