@@ -6,36 +6,36 @@ params: (multisig)
 0x5ca11C96263533AAe363c9fA0d3d8Dab7fAB6cB4
 
 Deployed Contract:
-0x28f39b65668916f3a4616ee6d38956ac0025cb82
+0x90c23a7b5e02e3dba7b87ad672af78029e40f60a
 
-2. Deploy Proxy Admin Contract
+2. Deploy Proxy Contract
 params: (multisig)
 0x5ca11C96263533AAe363c9fA0d3d8Dab7fAB6cB4
 
 Deployed Contract:
-0x646364d2c0f7fa37cfb03648c86237822d8220a8
+0x95471a51f53c7fd109a9b00037acb691fb70e4f6
 
 3. Deploy Transfer Proxy Contract
 params: (multisig)
 0x5ca11C96263533AAe363c9fA0d3d8Dab7fAB6cB4
 
 Deployed Contract:
-0x8183dee5627ea8ada5cc89f6bf66a41aa13eefcd
+0x52b48f39c7d092125389448e55fefa5570906d1a
 
-4. Deploy Proxy Contract
-params: (state, proxy_admin)
-state:0x28f39b65668916f3a4616ee6d38956ac0025cb82
-proxy_admin:0x646364d2c0f7fa37cfb03648c86237822d8220a8
-transfer_proxy:0x8183dee5627ea8ada5cc89f6bf66a41aa13eefcd
+4. Deploy Logic Contract
+params: (state, proxy, transfer_proxy)
+state:0x90c23a7b5e02e3dba7b87ad672af78029e40f60a
+proxy:0x95471a51f53c7fd109a9b00037acb691fb70e4f6
+transfer_proxy:0x52b48f39c7d092125389448e55fefa5570906d1a
 
 Deployer Contract:
-0x4a765f7b55f5f2ca0901a56783fc86fb25f7e580
+0xe20145a904558f1fefb9e3a08c8e785456d7dc62
 
-4. In State Contract, update Proxy Contract
+4. In State Contract, update Logic Contract
 
-5. In Proxy Admin Contract, update Proxy Contract
+5. In Proxy Contract, update Logic Contract
 
-6. In Transfer Proxy, updateProxy
+6. In Transfer Proxy, updateProxy with Logic Contract
 
 7. Increase Allowance in ZRC2
 
