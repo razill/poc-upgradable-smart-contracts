@@ -1,0 +1,143 @@
+(* SPDX-License-Identifier: GPL-3.0 *)
+scilla_version 0
+
+(***************************************************)
+(*               Associated library                *)
+(***************************************************)
+import BoolUtils IntUtils
+
+library Logic
+
+let zero_address = 0x0000000000000000000000000000000000000000
+let false = False
+let true = True
+
+let one_msg = 
+  fun (msg : Message) => 
+    let nil_msg = Nil {Message} in
+    Cons {Message} msg nil_msg
+
+(* Error exceptions *)
+type Error =
+  | NotPausedError
+  | PausedError
+  | ZeroAddressError
+  | NotProxyAdminError
+
+let make_error =
+  fun (result : Error) =>
+    let result_code = 
+      match result with
+      | NotPausedError                      => Int32 -1
+      | PausedError                         => Int32 -2
+      | ZeroAddressError                    => Int32 -3
+      | NotProxyAdminError                  => Int32 -4
+      end
+    in
+    { _exception : "Error"; source : "Logic"; code : result_code }
+
+(***************************************************)
+(*             The contract definition             *)
+(***************************************************)
+
+contract Logic(state: ByStr20, proxy: ByStr20, transfer_proxy: ByStr20)
+
+field is_paused: Bool = false
+
+(* Procedures *)
+procedure Throw(error : Error)
+  e = make_error error;
+  throw e
+end
+
+procedure RequireProxy()
+  current_proxy = proxy;
+  is_proxy_admin = builtin eq current_proxy _sender;
+  match is_proxy_admin with
+  | True => 
+  | False =>
+    error = NotProxyAdminError;
+    Throw error
+  end
+end
+
+procedure RequireNonZeroAddress(to: ByStr20)
+  (* Reference: https://github.com/ConsenSys/smart-contract-best-practices/blob/master/docs/tokens.md *)
+  is_zero_address = builtin eq to zero_address;
+  match is_zero_address with
+  | False =>
+  | True =>
+    error = ZeroAddressError;
+    Throw error
+  end
+end
+
+procedure RequireNotPaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
+  | False =>
+  | True =>
+    (* Contract is paused *)
+    error = PausedError;
+    Throw error
+  end
+end
+
+procedure RequirePaused()
+  (* Reference: *)
+  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
+  paused <- is_paused;
+  match paused with
+  | True =>
+  | False =>
+    (* Contract is paused *)
+    error = NotPausedError;
+    Throw error
+  end
+end
+
+(* Call Transfer Logic to Transfer Tokens *)
+procedure SampleZRC2Transfer_transfer (token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  msg_to_zrc2 = {
+    _tag: "ZRC2TransferFrom";
+    _recipient: transfer_proxy;
+    _amount: Uint128 0;
+    token_address: token_address;
+    from: from;
+    to: to;
+    amount: amount
+  };
+  msgs = one_msg msg_to_zrc2;
+  send msgs
+end
+
+(* Call State Contract to Update Transfer details *)
+procedure SampleZRC2Transfer_update (token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  msg_to_update = {
+    _tag: "SampleZRC2Transfer";
+    _recipient: state;
+    _amount: Uint128 0;
+    token_address: token_address;
+    from: from;
+    to: to;
+    amount: amount
+  };
+  msgs = one_msg msg_to_update;
+  send msgs
+end
+
+(* Verify and Initiate Transfer & Update *)
+transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  RequireProxy;
+  RequireNotPaused;
+  RequireNonZeroAddress proxy;
+  RequireNonZeroAddress state;
+  RequireNonZeroAddress transfer_proxy;
+  RequireNonZeroAddress token_address;
+  RequireNonZeroAddress from;
+  RequireNonZeroAddress to;
+  SampleZRC2Transfer_transfer token_address from to amount;
+  SampleZRC2Transfer_update token_address from to amount
+end
