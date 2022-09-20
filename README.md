@@ -80,7 +80,7 @@ proxy contract (required) - refer to checkpoint 2
 proxy contract (required) - refer to checkpoint 3
 ```
 
-4. Update Logic Contract
+5. Update Logic Contract
 
 a. update logic contract in state contract
 
@@ -100,7 +100,7 @@ c. update logic contract in transfer proxy contract
 updateOperator( -logic contract address-, -status- )
 ```
 
-5. Execute Transaction
+6. Execute Transaction
 
 We have successfully, deployed the contract and have the necessary permissions to execute the transaction.
 
@@ -116,7 +116,7 @@ Execution Flow 1:
 
 ![rfc20 drawio (10)](https://user-images.githubusercontent.com/110367244/191196470-7a68c39d-8b75-400b-bab0-054ca3640f12.png)
 
-6. Upgrade Logic Contract
+7. Upgrade Logic Contract
 
 Deploy new logic smart contract with the update and fixes.
 
@@ -128,9 +128,9 @@ proxy contract (required) - refer to checkpoint 2
 proxy contract (required) - refer to checkpoint 3
 ```
 
-7. follow step 4 in this section
+8. follow step 5 in this section
 
-8. follow step 5 to execute the transaction
+9. follow step 6 to execute the transaction
 
 Execution Flow 2:
 
