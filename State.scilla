@@ -37,7 +37,7 @@ contract State(multiSig: ByStr20)
 
 field proxy: ByStr20 = zero_address
 
-field welcome_msg : String = ""
+field transfer : Map ByStr20 (Map ByStr20 (Map ByStr20 Uint128)) = Emp ByStr20 (Map ByStr20 (Map ByStr20 Uint128))
 
 (* Procedures *)
 procedure Throw(error : Error)
@@ -56,7 +56,7 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireProxy()
+procedure RequireLogic()
   current_proxy <- proxy;
   RequireNonZeroAddress current_proxy;
   is_proxy = builtin eq current_proxy _sender;
@@ -68,8 +68,12 @@ procedure RequireProxy()
   end
 end
 
+procedure UpdateZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  transfer[token_address][from][to] := amount
+end
+
 (* @multi-sig *)
-transition updateProxy(to: ByStr20)
+transition UpdateLogic(to: ByStr20)
   RequireNonZeroAddress to;
   is_valid = builtin eq multiSig _sender;
   match is_valid with
@@ -88,15 +92,7 @@ transition updateProxy(to: ByStr20)
   end
 end
 
-transition SetHello (msg : String)
-  RequireProxy;
-  welcome_msg := msg;
-  e = { _eventname : "SetHello"; caller: _sender };
-  event e
-end
-
-transition GetHello ()
-  r <- welcome_msg;
-  e = {_eventname: "GetHello"; msg: r};
-  event e
+transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  RequireLogic;
+  UpdateZRC2Transfer_ token_address from to amount
 end

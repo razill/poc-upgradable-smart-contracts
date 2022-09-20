@@ -22,7 +22,7 @@ type Error =
   | NotPausedError
   | PausedError
   | ZeroAddressError
-  | NotProxyAdminError
+  | NotMultiSigError
 
 let make_error =
   fun (result : Error) =>
@@ -31,7 +31,7 @@ let make_error =
       | NotPausedError                      => Int32 -1
       | PausedError                         => Int32 -2
       | ZeroAddressError                    => Int32 -3
-      | NotProxyAdminError                  => Int32 -4
+      | NotMultiSigError                    => Int32 -4
       end
     in
     { _exception : "Error"; source : "Proxy"; code : result_code }
@@ -40,7 +40,9 @@ let make_error =
 (*             The contract definition             *)
 (***************************************************)
 
-contract Proxy(state: ByStr20, proxy_admin: ByStr20)
+contract Proxy(multiSig: ByStr20)
+
+field proxy: ByStr20 = zero_address
 
 field is_paused: Bool = false
 
@@ -48,17 +50,6 @@ field is_paused: Bool = false
 procedure Throw(error : Error)
   e = make_error error;
   throw e
-end
-
-procedure RequireProxyAdmin()
-  current_proxy = proxy_admin;
-  is_proxy_admin = builtin eq current_proxy _sender;
-  match is_proxy_admin with
-  | True => 
-  | False =>
-    error = NotProxyAdminError;
-    Throw error
-  end
 end
 
 procedure RequireNonZeroAddress(to: ByStr20)
@@ -72,47 +63,42 @@ procedure RequireNonZeroAddress(to: ByStr20)
   end
 end
 
-procedure RequireNotPaused()
-  (* Reference: *)
-  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
-  paused <- is_paused;
-  match paused with
+(* @multi-sig *)
+transition UpdateLogic(to: ByStr20)
+  RequireNonZeroAddress to;
+  is_valid = builtin eq multiSig _sender;
+  match is_valid with
   | False =>
-  | True =>
-    (* Contract is paused *)
-    error = PausedError;
+    error = NotMultiSigError;
     Throw error
+  | True =>
+    current_block_number <- & BLOCKNUMBER;
+    proxy := to;
+    e = { 
+      _eventname: "ProxyUpdated";
+      address: to;
+      when: current_block_number
+    };
+    event e
   end
 end
 
-procedure RequirePaused()
-  (* Reference: *)
-  (* https://consensys.github.io/smart-contract-best-practices/general_philosophy/#prepare-for-failure *)
-  paused <- is_paused;
-  match paused with
-  | True =>
-  | False =>
-    (* Contract is paused *)
-    error = NotPausedError;
-    Throw error
-  end
-end
-
-procedure SetHello_(msg_to_send : String)
-  msg = {
-    _tag: "SetHello";
-    _recipient: state;
+procedure SampleZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  current_proxy <- proxy;
+  RequireNonZeroAddress current_proxy;
+  msg_to_act = {
+    _tag: "SampleZRC2Transfer";
+    _recipient: current_proxy;
     _amount: Uint128 0;
-    msg: msg_to_send
+    token_address: token_address;
+    from: from;
+    to: to;
+    amount: amount
   };
-  msgs = one_msg msg;
+  msgs = one_msg msg_to_act;
   send msgs
 end
 
-transition SetHello (msg : String)
-  RequireProxyAdmin;
-  RequireNotPaused;
-  RequireNonZeroAddress proxy_admin;
-  RequireNonZeroAddress state;
-  SetHello_ msg
+transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
+  SampleZRC2Transfer_ token_address from to amount
 end
