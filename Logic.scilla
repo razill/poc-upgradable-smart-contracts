@@ -17,9 +17,6 @@ let one_msg =
     let nil_msg = Nil {Message} in
     Cons {Message} msg nil_msg
     
-type Order = 
-| Order of ByStr20 BNum
-
 type OrderParam =
 | OrderParam of ByStr20 Uint256 ByStr20 Uint128 Uint32 BNum
 
@@ -134,12 +131,17 @@ procedure SampleZRC2Transfer_update (token_address: ByStr20, from: ByStr20, to: 
   send msgs
 end
 
-procedure SetOrder_ (order: OrderParam)
+procedure SetOrder_ (token_address: ByStr20, token_id: Uint256, payment_token_address: ByStr20, sale_price: Uint128, side: Uint32, expiration_bnum: BNum)
   msg_to_set_order = {
     _tag: "SetOrder";
     _recipient: state;
     _amount: Uint128 0;
-    order: order
+    token_address: token_address;
+    token_id: token_id;
+    payment_token_address: payment_token_address;
+    sale_price: sale_price;
+    side: side;
+    expiration_bnum: expiration_bnum
   };
   msgs = one_msg msg_to_set_order;
   send msgs
@@ -170,13 +172,13 @@ transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20
   SampleZRC2Transfer_update token_address from to amount
 end
 
-transition SetOrder(order: OrderParam)
+transition SetOrder(token_address: ByStr20, token_id: Uint256, payment_token_address: ByStr20, sale_price: Uint128, side: Uint32, expiration_bnum: BNum)
   RequireProxy;
   RequireNotPaused;
   RequireNonZeroAddress proxy;
   RequireNonZeroAddress state;
   RequireNonZeroAddress transfer_proxy;
-  SetOrder_ order
+  SetOrder_ token_address token_id payment_token_address sale_price side expiration_bnum
 end
 
 transition SetBatchOrder(order_list: OrderParam)

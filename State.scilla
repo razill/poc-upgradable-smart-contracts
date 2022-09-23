@@ -125,8 +125,9 @@ transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20
   UpdateZRC2Transfer_ token_address from to amount
 end
 
-transition SetOrder(order: OrderParam)
+transition SetOrder(token_address: ByStr20, token_id: Uint256, payment_token_address: ByStr20, sale_price: Uint128, side: Uint32, expiration_bnum: BNum)
   RequireLogic;
+  order = OrderParam token_address token_id payment_token_address sale_price side expiration_bnum;
   DoSetOrder order
 end
 
