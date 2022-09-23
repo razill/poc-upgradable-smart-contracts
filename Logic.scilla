@@ -16,6 +16,12 @@ let one_msg =
   fun (msg : Message) => 
     let nil_msg = Nil {Message} in
     Cons {Message} msg nil_msg
+    
+type Order = 
+| Order of ByStr20 BNum
+
+type OrderParam =
+| OrderParam of ByStr20 Uint256 ByStr20 Uint128 Uint32 BNum
 
 (* Error exceptions *)
 type Error =
@@ -128,6 +134,28 @@ procedure SampleZRC2Transfer_update (token_address: ByStr20, from: ByStr20, to: 
   send msgs
 end
 
+procedure SetOrder_ (order: OrderParam)
+  msg_to_set_order = {
+    _tag: "SetOrder";
+    _recipient: state;
+    _amount: Uint128 0;
+    order: order
+  };
+  msgs = one_msg msg_to_set_order;
+  send msgs
+end
+
+procedure SetBatchOrder_ (order_list: OrderParam)
+  msg_to_set_order = {
+    _tag: "SetBatchOrder";
+    _recipient: state;
+    _amount: Uint128 0;
+    order_list: order_list
+  };
+  msgs = one_msg msg_to_set_order;
+  send msgs
+end
+
 (* Verify and Initiate Transfer & Update *)
 transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   RequireProxy;
@@ -140,4 +168,22 @@ transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20
   RequireNonZeroAddress to;
   SampleZRC2Transfer_transfer token_address from to amount;
   SampleZRC2Transfer_update token_address from to amount
+end
+
+transition SetOrder(order: OrderParam)
+  RequireProxy;
+  RequireNotPaused;
+  RequireNonZeroAddress proxy;
+  RequireNonZeroAddress state;
+  RequireNonZeroAddress transfer_proxy;
+  SetOrder_ order
+end
+
+transition SetBatchOrder(order_list: OrderParam)
+  RequireProxy;
+  RequireNotPaused;
+  RequireNonZeroAddress proxy;
+  RequireNonZeroAddress state;
+  RequireNonZeroAddress transfer_proxy;
+  SetBatchOrder_ order_list
 end

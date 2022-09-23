@@ -17,6 +17,12 @@ let one_msg =
     let nil_msg = Nil {Message} in
     Cons {Message} msg nil_msg
 
+type Order = 
+| Order of ByStr20 BNum
+
+type OrderParam =
+| OrderParam of ByStr20 Uint256 ByStr20 Uint128 Uint32 BNum
+
 (* Error exceptions *)
 type Error =
   | NotPausedError
@@ -42,7 +48,7 @@ let make_error =
 
 contract Proxy(multiSig: ByStr20)
 
-field proxy: ByStr20 = zero_address
+field logic: ByStr20 = zero_address
 
 field is_paused: Bool = false
 
@@ -73,7 +79,7 @@ transition UpdateLogic(to: ByStr20)
     Throw error
   | True =>
     current_block_number <- & BLOCKNUMBER;
-    proxy := to;
+    logic := to;
     e = { 
       _eventname: "ProxyUpdated";
       address: to;
@@ -84,11 +90,11 @@ transition UpdateLogic(to: ByStr20)
 end
 
 procedure SampleZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
-  current_proxy <- proxy;
-  RequireNonZeroAddress current_proxy;
+  current_logic <- logic;
+  RequireNonZeroAddress current_logic;
   msg_to_act = {
     _tag: "SampleZRC2Transfer";
-    _recipient: current_proxy;
+    _recipient: current_logic;
     _amount: Uint128 0;
     token_address: token_address;
     from: from;
@@ -99,6 +105,40 @@ procedure SampleZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20
   send msgs
 end
 
+procedure SetOrder_ (order: OrderParam)
+  current_logic <- logic;
+  RequireNonZeroAddress current_logic;
+  msg_to_set_order = {
+    _tag: "SetOrder";
+    _recipient: current_logic;
+    _amount: Uint128 0;
+    order: order
+  };
+  msgs = one_msg msg_to_set_order;
+  send msgs
+end
+
+procedure SetBatchOrder_ (order_list: OrderParam)
+  current_logic <- logic;
+  RequireNonZeroAddress current_logic;
+  msg_to_set_order = {
+    _tag: "SetBatchOrder";
+    _recipient: current_logic;
+    _amount: Uint128 0;
+    order_list: order_list
+  };
+  msgs = one_msg msg_to_set_order;
+  send msgs
+end
+
 transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   SampleZRC2Transfer_ token_address from to amount
+end
+
+transition SetOrder(order: OrderParam)
+  SetOrder_ order
+end
+
+transition SetBatchOrder(order_list: OrderParam)
+  SetBatchOrder_ order_list
 end
