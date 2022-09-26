@@ -12,6 +12,12 @@ let zero_address = 0x0000000000000000000000000000000000000000
 let false = False
 let true = True
 
+type Order = 
+| Order of ByStr20 BNum
+
+type OrderParam =
+| OrderParam of ByStr20 Uint256 ByStr20 Uint128 Uint32 BNum
+
 (* Error exceptions *)
 type Error =
   | NotMultiSigError
@@ -38,6 +44,9 @@ contract State(multiSig: ByStr20)
 field proxy: ByStr20 = zero_address
 
 field transfer : Map ByStr20 (Map ByStr20 (Map ByStr20 Uint128)) = Emp ByStr20 (Map ByStr20 (Map ByStr20 Uint128))
+
+(* token_address -> ( token_id -> ( payment_token_address -> (sale_price -> sell_order  ) ) *)
+field sell_orders: Map ByStr20 (Map Uint256 (Map ByStr20 (Map Uint128 Order))) = Emp ByStr20 (Map Uint256 (Map ByStr20 (Map Uint128 Order)))
 
 (* Procedures *)
 procedure Throw(error : Error)
@@ -72,6 +81,25 @@ procedure UpdateZRC2Transfer_(token_address: ByStr20, from: ByStr20, to: ByStr20
   transfer[token_address][from][to] := amount
 end
 
+procedure DoSetOrder(order: OrderParam)
+  match order with
+  | OrderParam token_address token_id payment_token_address sale_price side expiration_bnum =>
+    new_order = Order _sender expiration_bnum;
+    sell_orders[token_address][token_id][payment_token_address][sale_price] := new_order;
+    e = {
+      _eventname : "SetOrder";
+      maker: _sender;
+      side: side;
+      token_address: token_address;
+      token_id: token_id;
+      payment_token_address: payment_token_address;
+      sale_price: sale_price;
+      expiration_bnum: expiration_bnum
+    };
+    event e
+  end
+end
+
 (* @multi-sig *)
 transition UpdateLogic(to: ByStr20)
   RequireNonZeroAddress to;
@@ -95,4 +123,16 @@ end
 transition SampleZRC2Transfer(token_address: ByStr20, from: ByStr20, to: ByStr20, amount: Uint128)
   RequireLogic;
   UpdateZRC2Transfer_ token_address from to amount
+end
+
+transition SetOrder(token_address: ByStr20, token_id: Uint256, payment_token_address: ByStr20, sale_price: Uint128, side: Uint32, expiration_bnum: BNum)
+  RequireLogic;
+  order = OrderParam token_address token_id payment_token_address sale_price side expiration_bnum;
+  DoSetOrder order
+end
+
+(* Batch set order *)
+transition SetBatchOrder(order_list: List OrderParam)
+  RequireLogic;
+  forall order_list DoSetOrder
 end
